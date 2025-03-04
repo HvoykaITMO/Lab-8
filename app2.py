@@ -1,6 +1,5 @@
 import cv2
 
-
 SQ_SIDE = 200 // 2  # половина стороны квадрата из данных пункта 3 моего варианта
 
 
@@ -15,9 +14,11 @@ def is_rect_inside(rect_in, rect_out):  # Функция, координатно
 cap = cv2.VideoCapture('sample.mp4')
 assert cap is not None, "file could not be read, check with os.path.exists()"
 
+'''Эти две строчки нужны для выполнения доп. задания'''
 tsokotuha = cv2.imread('fly64.png')  # Изображение Цокотухи
-fly_w, fly_h = tsokotuha.shape[:2][::-1]
-i = 0
+fly_h, fly_w = tsokotuha.shape[:2]  # Ширина и высота Цокотухи
+
+i = 0  # С помощью неё будем считать номера кадров
 while True:
     ret, frame = cap.read()
     if not ret:  # Проверка на конец видео
@@ -53,20 +54,34 @@ while True:
         c = max(contours, key=cv2.contourArea)  # Берём максимальный по площади контур
         x, y, w, h = cv2.boundingRect(c)  # По этим точкам получаем параметры прямоугольника с центром в точках контура
 
-        # cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Рисуем прямоугольник
-        new_fly_x = x - (fly_w // 2 - w // 2)
-        new_fly_y = y - (fly_h//2 - h//2)
-        roi = frame[new_fly_y:new_fly_y+fly_h, new_fly_x:new_fly_x+fly_w]
-        if roi.shape[:2] == (fly_h, fly_w):
-            frame[new_fly_y:new_fly_y+fly_h, new_fly_x:new_fly_x+fly_w] = tsokotuha
+        # cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2) # Если хотим нарисовать прямоугольник
+
+        '''Если хотим нарисовать Цокотуху, то используем строчки ниже'''
+        new_fly_x = x - (fly_w // 2 - w // 2)  # Полученная формула для расположения Цокотухи в центре контура по оси x
+        new_fly_y = y - (fly_h // 2 - h // 2)  # Полученная формула для расположения Цокотухи в центре контура по оси y
+        roi = frame[new_fly_y:new_fly_y + fly_h, new_fly_x:new_fly_x + fly_w]  # Выбираем интересующую нас область
+        if roi.shape[:2] == (fly_h, fly_w):  # Если длина и ширина Цокотухи совпадают по shape с нашим roi, то:
+            lim_tsokotuha = tsokotuha  # Копируем нашу Цокотуху в данную переменную
+            frame[new_fly_y:new_fly_y + fly_h, new_fly_x:new_fly_x + fly_w] = lim_tsokotuha  # Располагаем Цокотуху
+        else:  # Если не совпали (это может быть в случае, если roi с данными координатами выходит за размер фрейма)
+            lim_h, lim_w = roi.shape[:2]  # Тогда записываем длину и ширину у текущего roi
+
+            '''Переменной присваиваем значение lim_w, если ширина текущего roi не совпадает 
+            с оригинальной шириной Цокотухи (fly_w), иначе присваиваем fly_w. Для ширины по аналогии'''
+            crop_w = fly_w if fly_w == lim_w else lim_w
+            crop_h = fly_h if fly_h == lim_h else lim_h
+
+            lim_tsokotuha = tsokotuha[0:crop_h, 0:crop_w]  # Сохраняем обрезанную цокотуху
+            frame[new_fly_y:new_fly_y + crop_h, new_fly_x:new_fly_x + crop_w] = lim_tsokotuha  # Вставляем её в фрейм
 
         if i % 7 == 0:  # Каждый 7 кадр выводим в консоль координаты центра прямоугольника
             a, b = (x + w) // 2, (y + h) // 2
-            print(a, b)
-    '''Определяем цвет нашего квадрата, если фигура на видео полностью внутри него,
+            print(f'Центр контура: ({a}, {b})')
+
+    '''Определяем цвет нашего квадрата. Если контур на видео полностью внутри него,
     то он зелёного цвета, иначе - красного'''
-    color = (0, 255, 0) if is_rect_inside(rect_in=(x, y, x+w, y+h), rect_out=SQUARE) else (0, 0, 255)
-    cv2.rectangle(frame, SQUARE[:2], SQUARE[2:], color,  2)
+    color = (0, 255, 0) if is_rect_inside(rect_in=(x, y, x + w, y + h), rect_out=SQUARE) else (0, 0, 255)
+    cv2.rectangle(frame, SQUARE[:2], SQUARE[2:], color, 2)
     cv2.imshow('ART', frame)
     i += 1
 
