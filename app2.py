@@ -16,6 +16,7 @@ cap = cv2.VideoCapture('sample.mp4')
 assert cap is not None, "file could not be read, check with os.path.exists()"
 
 tsokotuha = cv2.imread('fly64.png')  # Изображение Цокотухи
+fly_w, fly_h = tsokotuha.shape[:2][::-1]
 i = 0
 while True:
     ret, frame = cap.read()
@@ -53,8 +54,11 @@ while True:
         x, y, w, h = cv2.boundingRect(c)  # По этим точкам получаем параметры прямоугольника с центром в точках контура
 
         # cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Рисуем прямоугольник
-        tsokotuha = cv2.resize(tsokotuha, (w, h))  # Подгоняем Цокотуху под размер фигуры
-        frame[y:y+h, x:x+w] = tsokotuha  # Вставляем Цокотуху
+        new_fly_x = x - (fly_w // 2 - w // 2)
+        new_fly_y = y - (fly_h//2 - h//2)
+        roi = frame[new_fly_y:new_fly_y+fly_h, new_fly_x:new_fly_x+fly_w]
+        if roi.shape[:2] == (fly_h, fly_w):
+            frame[new_fly_y:new_fly_y+fly_h, new_fly_x:new_fly_x+fly_w] = tsokotuha
 
         if i % 7 == 0:  # Каждый 7 кадр выводим в консоль координаты центра прямоугольника
             a, b = (x + w) // 2, (y + h) // 2
